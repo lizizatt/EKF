@@ -55,6 +55,9 @@ class SimpleKalman():
 
 
 class ExtendedKalman():
+	"""
+	Nonlinear Kalman Filter Implementation
+	"""
 	def __init__(self,initialObservation):
 		self.estimate = initialObservation  #current
 		self.previousEstimate = initialObservation   
@@ -62,9 +65,11 @@ class ExtendedKalman():
 		self.previousGain = np.identity(2)
 		self.errorPrediction = np.identity(2) #current estimation of the signal error,... starts as identity
 		self.previousErrorPrediction = np.identity(2)
-		self.sensorNoiseProperty = np.identity(2)*pow(.1,2)  #variance of sensor noise,
-		self.f = lambda x: np.array([math.sin(x[0]),math.cos(x[1])])  #state-transition function
-		self.h = lambda x: x  #sensor function ... in our case simply identity
+		self.sensorNoiseProperty = np.array([[math.pow(1,2),0],[0,math.pow(5,2)]])  #variance of sensor noise
+		self.f = lambda x: np.array([[math.pow(x[0][0],1.01)],[math.pow(x[1][0],.99)]])  #state-transition function
+		self.fJac = nd.Jacobian(self.f) #jacobian of f, since atm f is not mutable
+		self.h = lambda x: x  #sensor transfer function ... in our case simply identity
+		self.hJac = nd.Jacobian(self.h) #jacobian of h, since atm h is not mutable
 
 	def predict(self):
 		"""
@@ -73,10 +78,12 @@ class ExtendedKalman():
 		"""
 		#update current state
 		self.estimate = self.f(self.previousEstimate)
+
+		#find current jacobian value
+		jacVal = self.fJac(self.previousEstimate)
+
 		#update error prediction state
-		jac = nd.Jacobian(self.f)
-		jacVal = jac(self.previousEstimate)
-		self.errorPrediction = jacVal * self.previousErrorPrediction * np.transpose(jacVal)
+		self.errorPrediction = np.dot(jacVal , np.dot(self.previousErrorPrediction,np.transpose(jacVal)))
 
 	def update(self,currentObservation):
 		"""
@@ -85,19 +92,18 @@ class ExtendedKalman():
 		Also updates our learning parameters of gain and errorprediction.
 		"""
 		#update the current estimate based on the gain
-		self.estimate = self.estimate + self.gain*(currentObservation - self.h(self.estimate))
-
-		jac = nd.Jacobian(self.h)
-		jacVal = jac(self.estimate)
+		self.estimate = self.estimate + np.dot(self.gain,(currentObservation - self.h(self.estimate)))
+		#find current jacobian value
+		jacVal = self.hJac(self.estimate)
 
 		#update the gain based on results from hte previous attempt at estimating
-		invVal = jacVal * self.errorPrediction * np.transpose(jacVal) + self.sensorNoiseProperty
-		self.gain = self.errorPrediction * np.transpose(jacVal) * np.linalg.inv(invVal)
+		invVal = np.dot(jacVal, np.dot(self.errorPrediction, np.transpose(jacVal))) + self.sensorNoiseProperty
+		self.gain = np.dot(self.errorPrediction, np.dot(np.transpose(jacVal) , np.linalg.inv(invVal) ))
 		#update error prediction based on our success
-		self.errorPrediction = (np.identity(2) - self.gain * jacVal)*self.errorPrediction
+		self.errorPrediction = np.dot((np.identity(2) - np.dot(self.gain, jacVal)), self.errorPrediction)
 
 		#update variables for next round
-		self.previousEstimate = self.estimate[0]
+		self.previousEstimate = self.estimate
 		self.previousGain = self.gain
 		self.previousErrorPrediction = self.errorPrediction;
 
@@ -109,8 +115,8 @@ numSamples = 100
 samplingRate = 1.0 #in hz
 
 #our sensor simulators ... voltmeter and ammeter
-voltmeter = sensors.Voltmeter_Linear(0,1)
-ammeter = sensors.Ammeter_Linear(0,3)
+voltmeter = sensors.Voltmeter(0,1)
+ammeter = sensors.Ammeter(0,5)
 
 #run simulation, log results
 x_vals = []
@@ -122,13 +128,13 @@ ekfc_vals = []
 
 voltVal = voltmeter.getData(startTime)
 currentVal = ammeter.getData(startTime)
-initialReading = np.array([voltVal,currentVal])  #values are column vectors
-kf = SimpleKalman(initialReading)
+initialReading = np.array([[voltVal],[currentVal]])  #values are column vectors
+kf = ExtendedKalman(initialReading)
 for i in range(numSamples)[1:]:
 	currentTime = startTime + float(i)/samplingRate
 	voltVal = voltmeter.getData(currentTime)
 	currentVal = ammeter.getData(currentTime)
-	reading = np.array([voltVal,currentVal])  #values are column vectors
+	reading = np.array([[voltVal],[currentVal]])  #values are column vectors
 
 	kf.predict()
 	kf.update(reading)
@@ -137,9 +143,12 @@ for i in range(numSamples)[1:]:
 	volt_vals.append(voltVal)
 	current_vals.append(currentVal)
 	voltage_guess = kf.estimate[0][0]
-	current_guess = kf.estimate[1][1]
+	current_guess = kf.estimate[1][0]
 	ekfv_vals.append(voltage_guess)
 	ekfc_vals.append(current_guess)
+
+	print "Done with iter",i
+	print kf.estimate
 
 
 #display results

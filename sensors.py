@@ -8,9 +8,9 @@ class Voltmeter():
 	def __init__(self,noiseMean, noiseSTD):
 		self.noiseMean = noiseMean
 		self.noiseSTD = noiseSTD
-		self.prevData = 5.0;
+		self.prevData = 10.0;
 
-	def getData(self,time):
+	def getData(self):
 		"""
 		apply arbitrary function
 		"""
@@ -23,9 +23,9 @@ class Ammeter():
 	def __init__(self, noiseMean, noiseSTD):
 		self.noiseMean = noiseMean
 		self.noiseSTD = noiseSTD
-		self.prevData = 150;
+		self.prevData = 250;
 
-	def getData(self,time):
+	def getData(self):
 		"""
 		apply arbitrary function
 		"""
@@ -58,3 +58,4 @@ class Ammeter_Linear():
 		noise = np.random.normal(self.noiseMean,self.noiseSTD,1)
 		self.prevData = self.prevData * self.scaleFactor;
 		return self.prevData + noise[0]
+

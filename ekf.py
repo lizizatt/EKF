@@ -126,12 +126,12 @@ class ExtendedKalman():
 numSamples = 100
 
 #our sensor simulators ... voltmeter and ammeter
-voltmeter = sensors.Voltmeter(0,5)
+voltmeter = sensors.Voltmeter(0,3)
 ammeter = sensors.Ammeter(0,2)
 #and their associated state transfer functions, sensor transfer functions, and noise values
-stateTransfer = lambda x: np.array([[math.pow(x[0][0],1.01)],[math.pow(x[1][0],.99)]]) 
+stateTransfer = lambda x: np.array([[math.pow(x[0][0],1.01)],[math.pow(x[1][0],.99)+5]]) 
 sensorTransfer = lambda x: x 
-sensorNoise = np.array([[math.pow(5,2),0],[0,math.pow(5,2)]])
+sensorNoise = np.array([[math.pow(3,2),0],[0,math.pow(2,2)]])
 
 #result log holders
 x_vals = []
@@ -201,8 +201,6 @@ plt.clf()
 plt.xlabel('Samples')
 plt.ylabel('Resistance')
 plt.title('EKF Resistance Tracking')
-plt.plot(x_vals,current_vals, color='blue', label="Raw Current Data")
-plt.plot(x_vals,volt_vals, color='green',label="Raw Voltage Data")
 plt.plot(x_vals,ekfr_vals,marker="2", color='red',label="Filtered Resistance Value")
 plt.legend()
 plt.savefig("resistance.png")

@@ -64,7 +64,7 @@ class ExtendedKalman():
 	"""
 	Nonlinear Kalman Filter Implementation
 	"""
-	def __init__(self,initialObservation, numSensors, sensorNoise, stateTransitionFunction, sensorTransferFunction):
+	def __init__(self,initialObservation, numSensors, sensorNoise, stateTransitionFunction, sensorTransferFunction, processNoise, sprocessNoiseCovariance):
 		self.numSensors = numSensors
 		self.estimate = initialObservation  #current estimate, initialized with first observation
 		self.previousEstimate = initialObservation  #previous state's estimate, initialized with first observation
@@ -77,6 +77,8 @@ class ExtendedKalman():
 		self.fJac = nd.Jacobian(self.f) #jacobian of f
 		self.h = sensorTransferFunction  #sensor transfer function, from user input
 		self.hJac = nd.Jacobian(self.h) #jacobian of h
+		self.processNoise = processNoise;  #process noise
+		self.Q = processNoiseCovariance #process noise covariance
 
 	def predict(self):
 		"""
@@ -84,13 +86,13 @@ class ExtendedKalman():
 		Predicts estimate and error prediction according to model of the situation
 		"""
 		#update current state
-		self.estimate = self.f(self.previousEstimate)
+		self.estimate = self.f(self.previousEstimate) + self.processNoise
 
 		#find current jacobian value
-		jacVal = self.fJac(self.previousEstimate)
+		jacVal = self.fJac(self.previousEstimate) + self.processNoise
 
 		#update error prediction state
-		self.errorPrediction = np.dot(jacVal , np.dot(self.previousErrorPrediction,np.transpose(jacVal)))
+		self.errorPrediction = np.dot(jacVal , np.dot(self.previousErrorPrediction,np.transpose(jacVal))) + self.Q
 
 	def update(self,currentObservation):
 		"""
@@ -132,6 +134,8 @@ ammeter = sensors.Ammeter(0,2)
 stateTransfer = lambda x: np.array([[math.pow(x[0][0],1.01)],[math.pow(x[1][0],.99)+5]]) 
 sensorTransfer = lambda x: x 
 sensorNoise = np.array([[math.pow(3,2),0],[0,math.pow(2,2)]])
+processNoise = np.array([[0],[0]])
+processNoiseCovariance = np.array([[.1,0],[0,.1]])
 
 #result log holders
 x_vals = []
@@ -148,7 +152,7 @@ currentVal = ammeter.getData()
 #put them in a column vector
 initialReading = np.array([[voltVal],[currentVal]])  #values are column vectors
 #and initialize our filter with our initial reading, our 2 sensors, and all of the associated data
-kf = ExtendedKalman(initialReading,2,sensorNoise,stateTransfer,sensorTransfer)
+kf = ExtendedKalman(initialReading,2,sensorNoise,stateTransfer,sensorTransfer, processNoise, processNoiseCovariance)
 
 #now run the simulation
 for i in range(numSamples)[1:]:

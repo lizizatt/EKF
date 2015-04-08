@@ -125,7 +125,7 @@ class ExtendedKalman():
 
 
 #variables governing the simulation
-numSamples = 1000
+numSamples = 100
 
 #our sensor simulators ... voltmeter and ammeter
 voltmeter = sensors.Voltmeter(0,3)

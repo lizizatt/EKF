@@ -13,6 +13,8 @@ class Voltmeter():
 		"""
 		noise = np.random.normal(self.noiseMean,self.noiseSTD,1)
 		self.prevData = math.pow(self.prevData,1.01); #state transfer is xi = (xi-1)^1.01 
+		if(self.prevData > 100):
+			self.prevData = 10.0;
 		return self.prevData + noise[0]
 
 
